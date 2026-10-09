@@ -1,17 +1,27 @@
+
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-import os
+from sqlalchemy.engine import make_url
 
-# Database connection URL for TiDB Cloud
-DATABASE_URL = (
-    "mysql+pymysql://YOUR_USERNAME:YOUR_PASSWORD"
-    "@gateway01.ap-northeast-1.prod.aws.tidbcloud.com:4000/test"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# CA certificate
-CA_PATH = os.path.join(os.path.dirname(__file__), "ca.pem")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL is missing")
 
-# Creating database engine
+if os.name == "nt":
+    CA_PATH = os.path.join(os.path.dirname(__file__), "ca.pem")
+else:
+    CA_PATH = "/etc/ssl/certs/ca-certificates.crt"
+
+parsed_url = make_url(DATABASE_URL)
+
+# Print diagnostic information only — never print the password.
+print("DB driver:", parsed_url.drivername)
+print("DB username:", parsed_url.username)
+print("DB host:", parsed_url.host)
+print("DB database:", parsed_url.database)
+
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
@@ -23,12 +33,10 @@ engine = create_engine(
     },
 )
 
-# Creating sessions
 SessionLocal = sessionmaker(
     bind=engine,
     autoflush=False,
     autocommit=False,
 )
 
-# Creating the base class for ORM
 Base = declarative_base()
